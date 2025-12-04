@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGL-like Website</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff0f5;
+            background-image: 
+                radial-gradient(#ffd6e7 2px, transparent 2px),
+                radial-gradient(#ffebf3 1.5px, transparent 1.5px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            text-align: center;
+            position: relative;
+        }
+        #envelopeImg {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            cursor: pointer;
+            filter: drop-shadow(0 4px 8px rgba(255, 182, 193, 0.3));
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            z-index: 5;
+        }
+        #envelopeImg:active {
+            transform: scale(0.95);
+        }
+        #paper {
+            position: fixed;
+            bottom: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 400px;
+            background-image: url('https://files.catbox.moe/s1o9dx.jpg');
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #ffb6c1;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(255, 182, 193, 0.4);
+            display: none;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            z-index: 10;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #paper.expanded {
+            bottom: 10%;
+            width: 90vw;
+            height: 80vh;
+            max-width: 600px;
+            box-shadow: 0 8px 25px rgba(255, 182, 193, 0.5);
+        }
+        /* Overlay untuk klik di mana saja */
+        #clickAnywhereOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            display: none;
+            z-index: 15;
+            cursor: pointer;
+        }
+        *:focus {
+            outline: none !important;
+        }
+        #envelopeImg:hover {
+            filter: drop-shadow(0 6px 12px rgba(255, 182, 193, 0.5));
+        }
+        #paper:hover {
+            box-shadow: 0 6px 20px rgba(255, 182, 193, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="envelopeImg" src="https://files.catbox.moe/ydwy0x.png" alt="Envelope">
+        <div id="paper"></div>
+        <div id="clickAnywhereOverlay"></div>
+    </div>
+
+    <script>
+        // Preload gambar
+        const imagesToPreload = [
+            'https://files.catbox.moe/ydwy0x.png',
+            'https://files.catbox.moe/6ety8z.png',
+            'https://files.catbox.moe/s1o9dx.jpg'
+        ];
+
+        const preloadPromises = imagesToPreload.map(src => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = src;
+            });
+        });
+
+        const envelopeImg = document.getElementById('envelopeImg');
+        const paper = document.getElementById('paper');
+        const clickAnywhereOverlay = document.getElementById('clickAnywhereOverlay');
+        let clickCount = 0;
+        let isAnimating = false;
+        let isPaperOpen = false;
+
+        // Tunggu semua gambar selesai di-load
+        Promise.all(preloadPromises).then(() => {
+            console.log('All images preloaded');
+        }).catch(err => {
+            console.log('Some images failed to load', err);
+        });
+
+        envelopeImg.addEventListener('click', () => {
+            if (isAnimating || isPaperOpen) return;
+            
+            clickCount++;
+            isAnimating = true;
+            
+            if (clickCount === 1) {
+                // Klik pertama: ganti ke amplop kedua
+                envelopeImg.style.opacity = '0.8';
+                envelopeImg.style.transform = 'scale(0.95)';
+                
+                setTimeout(() => {
+                    envelopeImg.src = 'https://files.catbox.moe/6ety8z.png';
+                    envelopeImg.style.opacity = '1';
+                    envelopeImg.style.transform = 'scale(1)';
+                    isAnimating = false;
+                }, 150);
+                
+            } else if (clickCount === 2) {
+                // Klik kedua: muncul kertas
+                envelopeImg.style.opacity = '0';
+                envelopeImg.style.transform = 'scale(0.8) translateY(-20px)';
+                
+                paper.style.display = 'block';
+                paper.offsetHeight; // Force reflow
+                
+                paper.style.bottom = '10%';
+                paper.style.opacity = '0';
+                paper.style.transform = 'translateX(-50%) scale(0.9)';
+                
+                setTimeout(() => {
+                    paper.style.opacity = '1';
+                    paper.style.transform = 'translateX(-50%) scale(1)';
+                    isPaperOpen = true;
+                    
+                    // Tampilkan overlay untuk klik di mana saja setelah paper terbuka
+                    setTimeout(() => {
+                        clickAnywhereOverlay.style.display = 'block';
+                        isAnimating = false;
+                    }, 300);
+                }, 10);
+            }
+        });
+
+        // Klik pada paper untuk expand/collapse
+        paper.addEventListener('click', (e) => {
+            e.stopPropagation(); // Mencegah trigger overlay saat klik paper
+            
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            if (paper.classList.contains('expanded')) {
+                paper.classList.remove('expanded');
+                paper.style.opacity = '0.8';
+                paper.style.transform = 'translateX(-50%) scale(0.95)';
+                
+                setTimeout(() => {
+                    paper.style.opacity = '1';
+                    paper.style.transform = 'translateX(-50%) scale(1)';
+                    isAnimating = false;
+                }, 400);
+            } else {
+                paper.classList.add('expanded');
+                paper.style.opacity = '0.9';
+                setTimeout(() => {
+                    paper.style.opacity = '1';
+                    isAnimating = false;
+                }, 10);
+            }
+        });
+
+        // Klik di mana saja di layar untuk reset ke awal
+        clickAnywhereOverlay.addEventListener('click', () => {
+            if (isAnimating) return;
+            
+            isAnimating = true;
+            
+            // Tutup paper dengan animasi
+            paper.style.opacity = '0.8';
+            paper.style.transform = 'translateX(-50%) scale(0.9) translateY(50px)';
+            paper.classList.remove('expanded');
+            
+            setTimeout(() => {
+                paper.style.bottom = '-100%';
+                paper.style.opacity = '0';
+                paper.style.transform = 'translateX(-50%) scale(0.8)';
+                
+                // Sembunyikan overlay
+                clickAnywhereOverlay.style.display = 'none';
+                
+                // Reset amplop ke posisi awal
+                envelopeImg.style.opacity = '0';
+                envelopeImg.style.transform = 'scale(0.8) translateY(30px)';
+                
+                setTimeout(() => {
+                    // Reset ke amplop pertama
+                    envelopeImg.src = 'https://files.catbox.moe/ydwy0x.png';
+                    envelopeImg.style.opacity = '1';
+                    envelopeImg.style.transform = 'scale(1)';
+                    
+                    // Reset semua state
+                    clickCount = 0;
+                    isPaperOpen = false;
+                    isAnimating = false;
+                    
+                    // Sembunyikan paper setelah animasi selesai
+                    setTimeout(() => {
+                        paper.style.display = 'none';
+                    }, 400);
+                }, 300);
+            }, 200);
+        });
+
+        // Prevent blue highlight on mobile
+        document.addEventListener('touchstart', function() {}, {passive: true});
+    </script>
+</body>
+</html>
